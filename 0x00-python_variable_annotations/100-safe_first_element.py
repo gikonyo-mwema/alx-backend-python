@@ -1,4 +1,4 @@
-#!/bin/usr/env python3
+#!/usr/bin/env python3
 """ Duck typed annotations """
 from typing import Sequence, Any, Union
 
