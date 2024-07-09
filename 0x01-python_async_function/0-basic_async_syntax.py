@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+""" An async function """
 import asyncio
 import random
 
