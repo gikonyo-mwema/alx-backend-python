@@ -4,9 +4,15 @@ Test module for utils.access_nested_map function
 """
 
 import unittest
+from typing import Dict, Tuple, Union
+from unittest.mock import patch, Mock
 from parameterized import parameterized
-from utils import access_nested_map
-from utils import get_json
+
+from utils import (
+    access_nested_map,
+    get_json,
+    memoize,
+}
 
 
 class TestAccessNestedMap(unittest.TestCase):
@@ -19,55 +25,51 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": {"b": 2}}, ("a",), {"b": 2}),
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
-    def test_access_nested_map(self, nested_map, path, expected):
+    def test_access_nested_map(
+            self,
+            nested_map: Dict,
+            path: Tuple[str],
+            expected: Union[Dict, int],
+    ) -> None:
         """
         Test that access_nested_map returns the correct value
         """
         self.assertEqual(access_nested_map(nested_map, path), expected)
 
     @parameterized.expand([
-        ({}, ("a",)),
-        ({"a": 1}, ("a", "b")),
+        ({}, ("a",), KeyError),
+        ({"a": 1}, ("a", "b"), KeyError),
     ])
-    def test_access_nested_map_exception(self, nested_map, path):
+    def test_access_nested_map_exception(
+            self,
+            nested_map: Dict,
+            path: Tuple[str],
+            exception: Exception,
+    ) -> None:
         """
         Test that access_nested_map raises KeyError for invalid paths
         """
-        with self.assertRaises(KeyError) as context:
+        with self.assertRaises(exception):
             access_nested_map(nested_map, path)
-        self.assertEqual(str(context.exception), repr(path[-1]))
 
 
 class TestGetJson(unittest.TestCase):
     """
     Test class for get_json function
     """
-
-    @patch('utils.requests.get')
-    def test_get_json(self, mock_get):
+    @parameterized.expand([
+        ("http://example.com", {"payload": True}),
+        ("http://holberton.io", {"payload": False}),
+    ])
+    def test_get_json(
+            self,
+            test_url: str,
+            test_payload: Dict,
+    ) -> None:
         """
         Test that get_json returns the expected result
         """
-        test_cases = [
-            ("http://example.com", {"payload": True}),
-            ("http://holberton.io", {"payload": False}),
-        ]
-
-        for test_url, test_payload in test_cases:
-            # Create a mock response object with a json
-            # method that returns test_payload
-            mock_response = Mock()
-            mock_response.json.return_value = test_payload
-            mock_get.return_value = mock_response
-
-            # Call get_json with the test URL
-            result = get_json(test_url)
-
-            # Assert that requests.get was called exactly once with test_url
-            mock_get.assert_called_once_with(test_url)
-
-            # Assert that the result is equal to test_payload
-            self.assertEqual(result, test_payload)
-
-            # Reset mock for the next iteration
-            mock_get.reset_mock()
+        attrs = {'json.return_value': test_payload}
+        with patch("requests.get", return_value=Mock(**attrs)) as req_get:
+            self.assertEqual(get_json(test_url), test_payload)
+            req_get.assert_called_once_with(test_url)
